@@ -1,0 +1,175 @@
+'XIMA File Conversion
+
+'* Convert Filename of the saved report
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+objStartFolder = "X:\ECMarket\"
+objEndFolder = "C:\XIMA\ECMarket\Report From XIMA\"
+
+'Logging Mechanism
+Set objFTO = CreateObject("Scripting.FileSystemObject")
+LogFileName = "C:\XIMA\ScriptsProduction\ECLVL1nBILLING\Log.txt"
+Set MyFile = objFTO.OpenTextFile(LogFileName, 8, True)
+
+sDateTimeStamp = cStr(Year(now())) & "_" & Pad(cStr(Month(now())),2) & "_" & Pad(cStr(Day(now())),2) & "_" & Pad(cStr(Hour(now())),2) & "_" & Pad(cStr(Minute(now())),2)
+sDateStamp = cStr(Year(now())) & Pad(cStr(Month(now())),2) & Pad(cStr(Day(now())),2)
+
+'MsgBox sDateTimeStamp
+'MsgBox sDateStamp
+
+Set objFolder = objFSO.GetFolder(objStartFolder)
+
+Set colFiles = objFolder.Files
+
+For Each objFile in colFiles
+   if instr(objFile.Name,".csv") then
+		MyFile.Write Now() & ": CSV file " & objFile.Name & " moved to local folder." & vbCrLf 
+		objFSO.MoveFile objStartFolder & objFile.Name, objEndFolder & "NCR_" & sDateTimeStamp & ".csv"
+   end if
+Next
+
+Set objFSO = Nothing
+Set objFolder = Nothing
+
+'** Convert CSV to txt
+
+Set objExcel = CreateObject("Excel.Application")
+'objExcel.Application.Visible = True
+objExcel.Application.DisplayAlerts = False
+ofsXFile = "C:\XIMA\ECMarket\Report From XIMA\NCR_" & sDateTimeStamp
+Set objWorkbook = objExcel.Workbooks.Open(ofsXFile & ".csv")
+ofsXSheet = "NCR_" & sDateTimeStamp
+optFN = "C:\XIMA\ECMarket\Output\" & sDateStamp & "_NCR_ECMarket"
+
+'"NCR_" & sDateTimeStamp
+objWorkbook.Sheets(ofsXSheet).Rows("1:3").Entirerow.delete
+
+objWorkbook.SaveAs ofsXFile & ".txt", -4158 
+objExcel.Quit
+
+fl = ofsXFile & ".txt"
+ft = " CSV to TXT."
+call FindFind(fl, ft)
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile(ofsXFile & ".txt", 1)
+
+objExcel.Application.Visible = True
+objExcel.Application.DisplayAlerts = True
+
+Set objWorkbook = Nothing
+Set objExcel = Nothing
+Set objFile = Nothing
+
+'*** Removing Double Quotes
+
+Const ForReading = 1
+Const ForWriting = 2
+
+'Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile(ofsXFile & ".txt", ForReading)
+
+strText = objFile.ReadAll
+
+objFile.Close
+strNewText = Replace(strText, chr(34), "")
+Set objFile = objFSO.OpenTextFile(ofsXFile & ".txt", ForWriting)
+objFile.WriteLine strNewText
+objFile.Close
+Set objFile = Nothing
+
+'**** Open file in excel and save as txt
+
+Set objExcel = CreateObject("Excel.Application")
+objExcel.Application.Visible = False
+objExcel.Application.DisplayAlerts = False
+Set objWorkbook = objExcel.Workbooks.Open(ofsXFile & ".txt")
+
+'***** Insert value "Date" in A1, Replace Blanks with 0, Include HuntGroupName and ECLVL1 
+
+objWorkbook.Sheets(ofsXSheet).Range("A1").Value = "Date"
+
+Set Rng1 = objWorkbook.Sheets(ofsXSheet).Range("B2")	
+Set Rng2 = objWorkbook.Sheets(ofsXSheet).Range("A2").End(-4121).Offset(0,36)  'Columns to be Counted
+
+For each cell in objWorkbook.Sheets(ofsXSheet).Range(Rng1.Address & ":" & Rng2.Address)
+'For each cell in objWorkbook.Sheets(ofsXSheet).Range("B2:AK49")
+	If IsEmpty(cell.value) = true then
+	 cell.value = 0
+	End IF
+Next
+
+objWorkbook.Sheets(ofsXSheet).Range("AL1").value = "HuntGroup"
+
+Set Rng3 = objWorkbook.Sheets(ofsXSheet).Range("AJ2").End(-4121).Offset(0,2)
+
+For each cell in objWorkbook.Sheets(ofsXSheet).Range("AL2:" & Rng3.Address)
+	cell.Value = "ECMarket"
+Next
+optFNArchive = "C:\XIMA\ECMarket\Report From XIMA\Archive\" & sDateStamp & "_NCR_ECMarket"
+objWorkbook.SaveAs optFN & ".txt", -4158
+fl = optFN & ".txt"
+fo = " save, remove comma. "
+call FindFind(fl, fo)
+objWorkbook.SaveAs optFNArchive & ".txt", -4158
+fl = optFNArchive & ".txt"
+fo = " save archive "
+call FindFind(fl, fo)
+objExcel.Quit
+objExcel.Application.Visible = True
+Set objExcel = Nothing
+Set objWorkbook = Nothing
+Set Rng1 = Nothing
+Set Rng2 = Nothing
+Set Rng3 = Nothing
+
+'****** Archive csv and txt files
+
+Set objFSO_Archive = CreateObject("Scripting.FileSystemObject")
+
+objEndFolderArchive = objEndFolder & "Archive\"
+
+Set objFolder_Archive = objFSO_Archive.GetFolder(objEndFolder)
+'Msgbox objEndFolderArchive
+Set colFiles_Archive = objFolder_Archive.Files
+
+For Each objFile_2 in colFiles_Archive
+
+   if instr(objFile_2.Name,".csv") OR instr(objFile_2.Name,".txt")then
+		objFSO_Archive.CopyFile objEndFolder & objFile_2.Name, objEndFolderArchive & objFile_2.Name, True
+		objFSO_Archive.DeleteFile objEndFolder & objFile_2.Name
+   end if
+  
+Next
+
+Set objFSO_Archive = Nothing 
+Set objFolder_Archive = Nothing
+Set colFiles_Archive = Nothing
+
+MyFile.Close
+Set objFTO = Nothing
+
+Function Pad(CStr2Pad, ReqStrLen)
+'Source: http://saltwetbytes.wordpress.com/2012/10/16/vbscript-adding-datetime-stamp-to-log-file-name/
+    Dim Num2Pad
+ 
+    Pad = CStr2Pad
+    If len(CStr2Pad) < ReqStrLen Then
+        Num2Pad = String((ReqStrlen - Len(CStr2Pad)), "0")
+        Pad = Num2Pad & CStr2Pad
+    End If
+End Function
+
+Function FindFind(filepath, mesage)
+	Dim fsf
+	Dim fp, fm
+	Set fsf = CreateObject("Scripting.FileSystemObject")
+	fp = filepath
+	fm = mesage
+	If (fsf.FileExists(fp)) Then
+		MyFile.Write Now() & " : File Found " & fp &  "." & mesage & vbCrLf 
+	Else
+		MyFile.Write Now() & " : File Not Found " & fp &  "."  & mesage & vbCrLf
+	End If
+	Set fsf = Nothing
+End Function
