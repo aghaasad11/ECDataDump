@@ -1,0 +1,80 @@
+'********** The process is to FIRST open ECLVL1 File from C:\XIMA\Output folder.
+'	********** Then open each sub groups report one by one and copy the data from those reports into ECLVL1 File.
+'		********** Then this file will be saved through vbscrpit (DONE)
+'			********** Then the bat file will run which will encrypt the master file, send via ftp and archive all the files (in that order).
+
+' >>>>>>>>>>>> This file only compiles all the sub group reports into one file C:\XIMA\Output folder\20161025_NCR_EL1.txt <<<<<<<<<<<<
+' >>> NOTE: For any additional groups declare names sXXXXXXX, filepath fXXXXX, ranges
+
+sDateStamp = cStr(Year(now())) & Pad(cStr(Month(now())),2) & Pad(cStr(Day(now())),2)
+sECLVL1 = sDateStamp & "_NCR_EL1"
+sBilling = sDateStamp & "_NCR_Billing"
+sMarket = sDateStamp & "_NCR_ECMarket"
+
+fECLVL1 = "C:\XIMA\Output\" & sECLVL1 & ".txt"
+fBilling = "C:\XIMA\Billing\Output\" & sBilling & ".txt"
+fMarket = "C:\XIMA\ECMarket\Output\" & sMarket & ".txt"
+ 
+Set objExcel = CreateObject("Excel.Application")
+
+objExcel.Application.Visible = False
+objExcel.Application.DisplayAlerts = False
+
+Set objWorkbook_Billing = objExcel.Workbooks.Open(fBilling)
+
+Set BillingCopyRng1 = objWorkbook_Billing.Sheets(sBilling).Range("A2")
+Set BillingCopyRng2 = objWorkbook_Billing.Sheets(sBilling).Range("A2").End(-4121).Offset(0,37) 
+
+Set BillingCopyRngFinal = objWorkbook_Billing.Sheets(sBilling).Range(BillingCopyRng1.Address & ":" & BillingCopyRng2.Address) 'This is the copy range
+BillingCopyRngFinal.Copy
+
+Set objWorkbook_ECLVL1 = objExcel.Workbooks.Open(fECLVL1)
+Set ECLVL1PasteRng = objWorkbook_ECLVL1.Sheets(sECLVL1).Range("A2").End(-4121).Offset(1,0) 'This is where the data will be pasted
+ECLVL1PasteRng.PasteSpecial
+
+objWorkbook_ECLVL1.Save
+
+Set objWorkbook_Market = objExcel.Workbooks.Open(fMarket)
+
+Set MarketCopyRng1 = objWorkbook_Market.Sheets(sMarket).Range("A2")
+Set MarketCopyRng2 = objWorkbook_Market.Sheets(sMarket).Range("A2").End(-4121).Offset(0,37) 
+
+Set MarketCopyRngFinal = objWorkbook_Market.Sheets(sMarket).Range(MarketCopyRng1.Address & ":" & MarketCopyRng2.Address) 'This is the copy range
+MarketCopyRngFinal.Copy
+
+Set ECLVL1PasteRngMKT = objWorkbook_ECLVL1.Sheets(sECLVL1).Range("A2").End(-4121).Offset(1,0)
+ECLVL1PasteRngMKT.PasteSpecial
+
+objWorkbook_ECLVL1.Save
+objWorkbook_ECLVL1.Close
+objWorkbook_Billing.Close
+objWorkbook_Market.Close
+
+objExcel.Quit
+
+objExcel.Application.DisplayAlerts = True
+objExcel.Application.Visible = True
+
+Set objWorkbook_ECLVL1 = Nothing
+Set objWorkbook_Billing = Nothing
+Set ECLVL1PasteRngMKT = Nothing
+Set ECLVL1PasteRng = Nothing
+Set BillingCopyRng1 = Nothing
+Set BillingCopyRng2 = Nothing
+Set BillingCopyRngFinal = Nothing
+Set MarketCopyRng1 = Nothing
+Set MarketCopyRng2 = Nothing
+Set MarketCopyRngFinal = Nothing
+
+Set objExcel = Nothing
+
+Function Pad(CStr2Pad, ReqStrLen)
+'Source: http://saltwetbytes.wordpress.com/2012/10/16/vbscript-adding-datetime-stamp-to-log-file-name/
+    Dim Num2Pad
+ 
+    Pad = CStr2Pad
+    If len(CStr2Pad) < ReqStrLen Then
+        Num2Pad = String((ReqStrlen - Len(CStr2Pad)), "0")
+        Pad = Num2Pad & CStr2Pad
+    End If
+End Function
